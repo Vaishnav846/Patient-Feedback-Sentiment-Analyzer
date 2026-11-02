@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feedback History - Patient Feedback Sentiment Analyzer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="dashboard-page">
+    <div class="dashboard-wrapper">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>CarePulse</span>
+            </div>
+            
+            <div class="user-summary">
+                <div class="user-avatar">
+                    <i class="fa-solid fa-user-injured"></i>
+                </div>
+                <div class="user-info">
+                    <h4 class="user-name">{{ session.get('name') }}</h4>
+                    <span class="user-role">Patient Portal</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-house-chimney-medical"></i> Dashboard</a>
+                    </li>
+                    <li class="active">
+                        <a href="{{ url_for('history') }}"><i class="fa-solid fa-clock-rotate-left"></i> Feedback History</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user-gear"></i> My Profile</a>
+                    </li>
+                    <li class="logout-link">
+                        <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <div class="header-title">
+                    <h1>Feedback History</h1>
+                    <p>Track your submitted reviews and machine learning analysis</p>
+                </div>
+            </header>
+
+            <div class="history-container">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3><i class="fa-solid fa-clock-rotate-left"></i> Submitted Feedbacks</h3>
+                        <span class="badge badge-info">{{ feedbacks|length }} records found</span>
+                    </div>
+                    <div class="card-body">
+                        {% if feedbacks %}
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date of Visit</th>
+                                            <th>Hospital</th>
+                                            <th>Doctor & Dept</th>
+                                            <th>Feedback Text</th>
+                                            <th>Sentiment Analysis</th>
+                                            <th>Submitted At</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for feedback in feedbacks %}
+                                            <tr>
+                                                <td class="nowrap"><i class="fa-solid fa-calendar-check"></i> {{ feedback.date }}</td>
+                                                <td><strong>{{ feedback.hospital }}</strong></td>
+                                                <td>
+                                                    <div class="doc-cell">
+                                                        <span>{{ feedback.doctor }}</span>
+                                                        <small class="text-muted">{{ feedback.department }}</small>
+                                                    </div>
+                                                </td>
+                                                <td class="feedback-text-cell" title="{{ feedback.feedback }}">{{ feedback.feedback }}</td>
+                                                <td>
+                                                    <span class="sentiment-badge badge-{{ feedback.predicted_sentiment.lower() }}">
+                                                        {% if feedback.predicted_sentiment.lower() == 'positive' %}
+                                                            😊 Positive
+                                                        {% else %}
+                                                            😟 Negative
+                                                        {% endif %}
+                                                        <span class="conf-percentage">({{ feedback.confidence_score }})</span>
+                                                    </span>
+                                                </td>
+                                                <td class="nowrap text-muted"><small>{{ feedback.timestamp }}</small></td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="empty-state text-center py-5">
+                                <div class="empty-icon">
+                                    <i class="fa-solid fa-folder-open"></i>
+                                </div>
+                                <h3>No feedback records yet</h3>
+                                <p>You haven't submitted any patient reviews yet. Head to the dashboard to share your experience!</p>
+                                <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-sm mt-3">
+                                    <i class="fa-solid fa-plus"></i> Submit Feedback
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

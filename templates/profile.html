@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Patient Feedback Sentiment Analyzer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="dashboard-page">
+    <div class="dashboard-wrapper">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>CarePulse</span>
+            </div>
+            
+            <div class="user-summary">
+                <div class="user-avatar">
+                    <i class="fa-solid fa-user-injured"></i>
+                </div>
+                <div class="user-info">
+                    <h4 class="user-name">{{ session.get('name') }}</h4>
+                    <span class="user-role">Patient Portal</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <ul>
+                    <li>
+                        <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-house-chimney-medical"></i> Dashboard</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('history') }}"><i class="fa-solid fa-clock-rotate-left"></i> Feedback History</a>
+                    </li>
+                    <li class="active">
+                        <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user-gear"></i> My Profile</a>
+                    </li>
+                    <li class="logout-link">
+                        <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <div class="header-title">
+                    <h1>My Profile</h1>
+                    <p>Manage your account settings and update your credentials</p>
+                </div>
+            </header>
+
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages-dashboard">
+                        {% for category, message in messages %}
+                            <div class="flash-alert alert-{{ category }}">
+                                <i class="fa-solid {% if category == 'success' %}fa-circle-check{% elif category == 'danger' %}fa-circle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <div class="profile-container">
+                <div class="card profile-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-user-gear"></i> Edit Profile Details</h3>
+                        <p>Change your name or update your secure password</p>
+                    </div>
+                    <div class="card-body">
+                        <form action="{{ url_for('profile') }}" method="POST" onsubmit="return validateProfileForm()">
+                            <div class="form-group">
+                                <label for="email"><i class="fa-solid fa-envelope"></i> Email Address (Cannot be changed)</label>
+                                <input type="email" id="email" value="{{ user.email }}" disabled class="disabled-input">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="full_name"><i class="fa-solid fa-user"></i> Full Name</label>
+                                <input type="text" id="full_name" name="full_name" value="{{ user.full_name }}" required>
+                            </div>
+
+                            <div class="password-change-section">
+                                <h4 class="section-title"><i class="fa-solid fa-key"></i> Change Password <small class="text-muted">(Leave blank to keep current)</small></h4>
+                                
+                                <div class="form-group">
+                                    <label for="current_password"><i class="fa-solid fa-lock"></i> Current Password</label>
+                                    <input type="password" id="current_password" name="current_password" placeholder="Enter current password to verify changes">
+                                </div>
+
+                                <div class="form-row">
+                                    <div class="form-group col-md-6">
+                                        <label for="new_password"><i class="fa-solid fa-shield-halved"></i> New Password</label>
+                                        <input type="password" id="new_password" name="new_password" placeholder="Enter new password">
+                                    </div>
+                                    <div class="form-group col-md-6">
+                                        <label for="confirm_password"><i class="fa-solid fa-shield-halved"></i> Confirm New Password</label>
+                                        <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm new password">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary">
+                                <span>Save Changes</span> <i class="fa-solid fa-floppy-disk"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function validateProfileForm() {
+            var currPwd = document.getElementById("current_password").value;
+            var newPwd = document.getElementById("new_password").value;
+            var confPwd = document.getElementById("confirm_password").value;
+            
+            // If any password field is populated, all must be populated
+            if (currPwd || newPwd || confPwd) {
+                if (!currPwd || !newPwd || !confPwd) {
+                    alert("Please fill in Current Password, New Password, and Confirm Password fields to change your password!");
+                    return false;
+                }
+                if (newPwd !== confPwd) {
+                    alert("New passwords do not match!");
+                    return false;
+                }
+                if (newPwd.length < 6) {
+                    alert("New password must be at least 6 characters long!");
+                    return false;
+                }
+            }
+            return true;
+        }
+    </script>
+</body>
+</html>

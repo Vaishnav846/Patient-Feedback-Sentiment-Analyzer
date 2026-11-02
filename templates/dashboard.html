@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Patient Feedback Sentiment Analyzer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="dashboard-page">
+    <div class="dashboard-wrapper">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fa-solid fa-heart-pulse"></i>
+                <span>CarePulse</span>
+            </div>
+            
+            <div class="user-summary">
+                <div class="user-avatar">
+                    <i class="fa-solid fa-user-injured"></i>
+                </div>
+                <div class="user-info">
+                    <h4 class="user-name">{{ session.get('name') }}</h4>
+                    <span class="user-role">Patient Portal</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="active">
+                        <a href="{{ url_for('dashboard') }}"><i class="fa-solid fa-house-chimney-medical"></i> Dashboard</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('history') }}"><i class="fa-solid fa-clock-rotate-left"></i> Feedback History</a>
+                    </li>
+                    <li>
+                        <a href="{{ url_for('profile') }}"><i class="fa-solid fa-user-gear"></i> My Profile</a>
+                    </li>
+                    <li class="logout-link">
+                        <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <div class="header-title">
+                    <h1>Submit Feedback</h1>
+                    <p>Help us improve your healthcare experience</p>
+                </div>
+                <div class="header-meta">
+                    <span class="current-date"><i class="fa-solid fa-calendar-day"></i> {{ datetime_now }}</span>
+                </div>
+            </header>
+
+            <!-- Flash messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-messages-dashboard">
+                        {% for category, message in messages %}
+                            <div class="flash-alert alert-{{ category }}">
+                                <i class="fa-solid {% if category == 'success' %}fa-circle-check{% elif category == 'danger' %}fa-circle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+                                <span>{{ message }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <div class="dashboard-grid">
+                <!-- Feedback Form Card -->
+                <div class="card feedback-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-file-invoice"></i> Feedback Form</h3>
+                        <p>All fields are required</p>
+                    </div>
+                    <div class="card-body">
+                        <form id="feedback-form" action="{{ url_for('submit_feedback') }}" method="POST">
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <label for="hospital"><i class="fa-solid fa-hospital"></i> Select Hospital</label>
+                                    <select id="hospital" name="hospital" required>
+                                        <option value="" disabled selected>Choose Hospital...</option>
+                                        {% for hosp in hospitals %}
+                                            <option value="{{ hosp }}">{{ hosp }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label for="department"><i class="fa-solid fa-stethoscope"></i> Department</label>
+                                    <select id="department" name="department" required>
+                                        <option value="" disabled selected>Choose Department...</option>
+                                        {% for dept in departments %}
+                                            <option value="{{ dept }}">{{ dept }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group col-md-6">
+                                    <label for="doctor"><i class="fa-solid fa-user-doctor"></i> Select Doctor</label>
+                                    <select id="doctor" name="doctor" required disabled>
+                                        <option value="" disabled selected>Select Department First...</option>
+                                    </select>
+                                </div>
+                                <div class="form-group col-md-6">
+                                    <label for="date_visit"><i class="fa-solid fa-calendar-days"></i> Date of Visit</label>
+                                    <input type="date" id="date_visit" name="date_visit" max="{{ current_date_str }}" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="feedback"><i class="fa-solid fa-comment-medical"></i> Feedback Details</label>
+                                <textarea id="feedback" name="feedback" rows="5" placeholder="Share your experience (e.g., waiting time, treatment quality, staff behavior, doctor explanations...)" required minlength="10"></textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" id="btn-submit-feedback">
+                                <span>Submit Feedback</span> <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Prediction Output Panel -->
+                <div class="prediction-panel">
+                    <!-- Default Greeting State -->
+                    <div class="card result-card placeholder-state" id="result-placeholder">
+                        <div class="card-body text-center">
+                            <div class="placeholder-icon">
+                                <i class="fa-solid fa-brain"></i>
+                            </div>
+                            <h3>Sentiment Engine</h3>
+                            <p>Submit your feedback to see the real-time AI sentiment prediction and confidence scores here.</p>
+                        </div>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div class="card result-card loading-state d-none" id="result-loading">
+                        <div class="card-body text-center">
+                            <div class="spinner"></div>
+                            <h3>Analyzing sentiment...</h3>
+                            <p>Applying TF-IDF preprocessing and running Logistic Regression prediction...</p>
+                        </div>
+                    </div>
+
+                    <!-- Results State -->
+                    <div class="card result-card success-state d-none" id="result-success">
+                        <div class="card-header text-center">
+                            <h3>Analysis Result</h3>
+                            <p>Real-time AI Sentiment Prediction</p>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="sentiment-emoji-box" id="result-emoji">😊</div>
+                            <h2 class="sentiment-label" id="result-label">Positive</h2>
+                            
+                            <div class="confidence-container">
+                                <div class="confidence-header">
+                                    <span>Confidence Score</span>
+                                    <span class="confidence-value" id="result-confidence">92%</span>
+                                </div>
+                                <div class="confidence-progress-bar">
+                                    <div class="confidence-progress-fill" id="result-progress-fill" style="width: 92%;"></div>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-secondary btn-sm mt-4" id="btn-reset-form">
+                                <i class="fa-solid fa-redo"></i> Write Another Feedback
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts data passing -->
+    <script>
+        // Mappings for dropdown selection
+        const doctorMapping = {
+            {% for dept, docs in dept_doctors.items() %}
+                "{{ dept }}": [{% for doc in docs %}"{{ doc }}",{% endfor %}],
+            {% endfor %}
+        };
+    </script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Patient Feedback Sentiment Analyzer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="dashboard-page admin-page">
+    <div class="dashboard-wrapper">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <i class="fa-solid fa-heart-pulse text-danger"></i>
+                <span>CarePulse Admin</span>
+            </div>
+            
+            <div class="user-summary">
+                <div class="user-avatar admin-avatar">
+                    <i class="fa-solid fa-user-shield"></i>
+                </div>
+                <div class="user-info">
+                    <h4 class="user-name">{{ session.get('name') }}</h4>
+                    <span class="user-role">Administrator</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="active" onclick="switchAdminTab('overview', this)">
+                        <a href="javascript:void(0)"><i class="fa-solid fa-chart-pie"></i> Overview & Charts</a>
+                    </li>
+                    <li onclick="switchAdminTab('feedbacks', this)">
+                        <a href="javascript:void(0)"><i class="fa-solid fa-comments"></i> View All Feedback</a>
+                    </li>
+                    <li onclick="switchAdminTab('doctors', this)">
+                        <a href="javascript:void(0)"><i class="fa-solid fa-user-doctor"></i> Doctor Performance</a>
+                    </li>
+                    <li onclick="switchAdminTab('hospitals', this)">
+                        <a href="javascript:void(0)"><i class="fa-solid fa-hospital-user"></i> Hospital Rankings</a>
+                    </li>
+                    <li class="logout-link">
+                        <a href="{{ url_for('logout') }}"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <div class="header-title">
+                    <h1 id="admin-title">Admin Overview</h1>
+                    <p id="admin-subtitle">Analytics and overall stats dashboard</p>
+                </div>
+                <div class="header-meta">
+                    <button class="btn btn-secondary btn-sm" onclick="loadAdminData()"><i class="fa-solid fa-rotate"></i> Refresh Data</button>
+                </div>
+            </header>
+
+            <!-- Loading overlay -->
+            <div class="loading-overlay" id="admin-loading">
+                <div class="spinner"></div>
+                <p>Retrieving feedback analytics...</p>
+            </div>
+
+            <!-- TAB 1: OVERVIEW & CHARTS -->
+            <div id="tab-overview" class="admin-tab-content">
+                <!-- Statistics Dashboard Cards -->
+                <div class="stats-grid">
+                    <div class="stats-card">
+                        <div class="stats-icon text-primary"><i class="fa-solid fa-users"></i></div>
+                        <div class="stats-info">
+                            <h3 id="stat-users">0</h3>
+                            <span>Total Users</span>
+                        </div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-icon text-info"><i class="fa-solid fa-hospital"></i></div>
+                        <div class="stats-info">
+                            <h3 id="stat-hospitals">0</h3>
+                            <span>Total Hospitals</span>
+                        </div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-icon text-success"><i class="fa-solid fa-user-doctor"></i></div>
+                        <div class="stats-info">
+                            <h3 id="stat-doctors">0</h3>
+                            <span>Total Doctors</span>
+                        </div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-icon text-warning"><i class="fa-solid fa-message"></i></div>
+                        <div class="stats-info">
+                            <h3 id="stat-feedback">0</h3>
+                            <span>Total Feedback</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-grid mt-4">
+                    <div class="stats-card border-left-success">
+                        <div class="stats-icon text-success"><i class="fa-solid fa-face-smile"></i></div>
+                        <div class="stats-info">
+                            <h3 id="stat-pos">0</h3>
+                            <span>Positive Reviews</span>
+                        </div>
+                    </div>
+                    <div class="stats-card border-left-danger">
+                        <div class="stats-icon text-danger"><i class="fa-solid fa-face-frown"></i></div>
+                        <div class="stats-info">
+                            <h3 id="stat-neg">0</h3>
+                            <span>Negative Reviews</span>
+                        </div>
+                    </div>
+                    <div class="stats-card border-left-info">
+                        <div class="stats-icon text-info"><i class="fa-solid fa-trophy"></i></div>
+                        <div class="stats-info">
+                            <h5 id="stat-best-hosp" class="stat-highlight">Loading...</h5>
+                            <span>Best Hospital</span>
+                        </div>
+                    </div>
+                    <div class="stats-card border-left-primary">
+                        <div class="stats-icon text-primary"><i class="fa-solid fa-star"></i></div>
+                        <div class="stats-info">
+                            <h5 id="stat-best-doc" class="stat-highlight">Loading...</h5>
+                            <span>Best Doctor</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Container -->
+                <div class="charts-grid mt-4">
+                    <div class="card chart-card">
+                        <div class="card-header"><h4>Positive vs Negative Feedback</h4></div>
+                        <div class="card-body chart-container-pie">
+                            <canvas id="chart-pie"></canvas>
+                        </div>
+                    </div>
+                    <div class="card chart-card">
+                        <div class="card-header"><h4>Monthly Feedback Trends</h4></div>
+                        <div class="card-body">
+                            <canvas id="chart-line"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-grid mt-4">
+                    <div class="card chart-card">
+                        <div class="card-header"><h4>Hospital-wise Positive Reviews</h4></div>
+                        <div class="card-body">
+                            <canvas id="chart-hospital"></canvas>
+                        </div>
+                    </div>
+                    <div class="card chart-card">
+                        <div class="card-header"><h4>Doctor-wise Positive Reviews</h4></div>
+                        <div class="card-body">
+                            <canvas id="chart-doctor"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: VIEW ALL FEEDBACK -->
+            <div id="tab-feedbacks" class="admin-tab-content d-none">
+                <div class="card filter-card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-filter"></i> Search & Filters</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="filters-grid">
+                            <div class="filter-group">
+                                <label for="filter-search"><i class="fa-solid fa-magnifying-glass"></i> Keyword Search</label>
+                                <input type="text" id="filter-search" placeholder="Patient, doctor, hospital, or keyword..." oninput="applyFilters()">
+                            </div>
+                            <div class="filter-group">
+                                <label for="filter-hospital"><i class="fa-solid fa-hospital"></i> Hospital</label>
+                                <select id="filter-hospital" onchange="applyFilters()">
+                                    <option value="">All Hospitals</option>
+                                    <option value="Apollo Hospital">Apollo Hospital</option>
+                                    <option value="JSS Hospital">JSS Hospital</option>
+                                    <option value="Manipal Hospital">Manipal Hospital</option>
+                                    <option value="Fortis Hospital">Fortis Hospital</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="filter-doctor"><i class="fa-solid fa-user-doctor"></i> Doctor</label>
+                                <select id="filter-doctor" onchange="applyFilters()">
+                                    <option value="">All Doctors</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label for="filter-sentiment"><i class="fa-solid fa-face-smile"></i> Sentiment</label>
+                                <select id="filter-sentiment" onchange="applyFilters()">
+                                    <option value="">All Sentiments</option>
+                                    <option value="Positive">😊 Positive</option>
+                                    <option value="Negative">😟 Negative</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h3><i class="fa-solid fa-table-list"></i> Feedback Log Database</h3>
+                        <span class="badge badge-info" id="filter-count">0 records match</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table" id="feedback-table">
+                                <thead>
+                                    <tr>
+                                        <th>Patient Name</th>
+                                        <th>Hospital</th>
+                                        <th>Doctor</th>
+                                        <th>Feedback Text</th>
+                                        <th>Predicted Sentiment</th>
+                                        <th>Visit Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="feedback-tbody">
+                                    <!-- Populated via Javascript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: DOCTOR PERFORMANCE -->
+            <div id="tab-doctors" class="admin-tab-content d-none">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-user-doctor"></i> Individual Doctor Analytics</h3>
+                        <p>Total reviews, positive and negative feedback ratio, and positive rating score</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="performance-cards-grid" id="doctor-performance-cards">
+                            <!-- Populated via Javascript -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-list-ol"></i> Best Rated Doctors (Ranking)</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>Doctor Name</th>
+                                        <th>Positive Feedback Rating %</th>
+                                        <th>Total Reviews Count</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="doctor-rankings-tbody">
+                                    <!-- Populated via Javascript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: HOSPITAL RANKINGS -->
+            <div id="tab-hospitals" class="admin-tab-content d-none">
+                <div class="card">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-hospital"></i> Hospital Performance Rankings</h3>
+                        <p>Hospitals ranked according to positive sentiment percentage</p>
+                    </div>
+                    <div class="card-body">
+                        <div class="ranking-list" id="hospital-ranking-list">
+                            <!-- Populated via Javascript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Admin dashboard execution script -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Trigger initial data load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAdminData();
+        });
+    </script>
+</body>
+</html>
